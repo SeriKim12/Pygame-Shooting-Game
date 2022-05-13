@@ -606,7 +606,7 @@ def startgame():
     main()
     
     
-'''# 예지님 레벨코드 
+'''# y님 레벨코드 
 pygame.init()
 surface = pygame.display.set_mode((480, 640))
 

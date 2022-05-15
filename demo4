@@ -306,13 +306,13 @@ class Game(pygame.sprite.Sprite):
         max_monster_speed = 1 + int(self.shot_count / 100)        
         
         
-        if self.shot_count >= 300:
+        if self.shot_count >= 100:
             self.background_image = pygame.image.load(resource_path('./ourpygame/background2.png'))
             occur_of_monsters = 2 + int(self.shot_count / 300)
             min_monster_speed = 2 + int(self.shot_count / 200)
             max_monster_speed = 2 + int(self.shot_count / 100)   
                 
-            if self.shot_count >= 500:
+            if self.shot_count >= 200:
                 self.background_image = pygame.image.load(resource_path('./ourpygame/background3.png'))
                 occur_of_monsters = 3 + int(self.shot_count / 300)
                 min_monster_speed = 3 + int(self.shot_count / 200)

@@ -1,0 +1,644 @@
+import pygame
+import pygame_menu
+import os
+import sys
+import random
+from time import sleep
+import pandas as pd
+
+# 게임 스크린 크기
+SCREEN_WIDTH = 480
+SCREEN_HEIGHT = 640
+
+
+# 색 정의
+BLACK = (0, 0, 0)
+WHITE = (200, 200, 200)
+YELLOW = (250, 250, 50)
+RED = (250, 50, 50)
+
+# 전역 변수
+FPS = 60
+
+
+# Button 클래스
+class Button:
+    def __init__(self, img_in, x, y, width, height, img_act, x_act, y_act, action = None):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        if x + width > mouse[0] > x and y + height > mouse[1] > y:
+            gameDisplay.blit(img_act,(x_act, y_act))
+            if click[0] and action != None:
+                sleep(1)
+                action()
+        else:
+            gameDisplay.blit(img_in,(x,y))
+            
+# Button2 클래스
+class Button2:
+    def __init__(self, img_in, x, y, width, height, img_act, x_act, y_act, action=None):
+        mouse = pygame.mouse.get_pos()
+        click = pygame.mouse.get_pressed()
+        if x + width > mouse[0] > x and y + height > mouse[1] > y:
+            gameDisplay.blit(img_act, (x_act, y_act))
+        else:
+            gameDisplay.blit(img_in, (x, y))       
+        
+# 캐릭터 객체
+class Fighter(pygame.sprite.Sprite):
+    def __init__(self):
+        super(Fighter, self).__init__()
+        self.image = pygame.image.load(resource_path('./ourpygame/rifle.png')).convert_alpha()
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.reset()
+
+    # 캐릭터 리셋
+    def reset(self):
+        self.rect.x = int(SCREEN_WIDTH / 2)
+        self.rect.y = SCREEN_HEIGHT - self.rect.height
+        self.dx = 0
+        self.dy = 0
+
+    # 캐릭터 업데이트
+    def update(self):
+        self.rect.x += self.dx
+        self.rect.y += self.dy
+
+        if self.rect.x < 0 or self.rect.x + self.rect.width > SCREEN_WIDTH:
+            self.rect.x -= self.dx
+
+        if self.rect.y < 0 or self.rect.y + self.rect.height > SCREEN_HEIGHT:
+            self.rect.y -= self.dy
+
+    # 캐릭터 그리기
+    def draw(self, screen):
+        screen.blit(self.image, self.rect)
+
+    # 캐릭터 충돌 체크
+    def collide(self, sprites):
+        for sprite in sprites:
+            if pygame.sprite.collide_rect(self, sprite):
+                return sprite
+            
+    def change_fighter(self):
+        self.image = pygame.image.load(resource_path('./ourpygame/shotgun.png')).convert_alpha()
+        self.rect = self.image.get_rect()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.reset()
+
+# 탄환 객체
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self, xpos, ypos, speed):
+        super(Bullet, self).__init__()
+        self.image = pygame.image.load(resource_path('./ourpygame/bullet.png')).convert_alpha()
+        self.sound = pygame.mixer.Sound(resource_path('./ourpygame/rifle2.wav'))
+        self.rect = self.image.get_rect()
+        self.rect.x = xpos
+        self.rect.y = ypos
+        self.speed = speed
+
+    # 탄환 발사
+    def launch(self):
+        self.sound.play()
+
+    # 탄환 업데이트
+    def update(self):
+        self.rect.y -= self.speed
+        if self.rect.y + self.rect.height < 0 :
+            self.kill()
+
+    # 탄환 충돌 체크
+    def collide(self, sprites):
+        for sprite in sprites:
+            if pygame.sprite.collide_rect(self, sprite):
+                return sprite
+            
+    def change_weapon(self, xpos, ypos, speed):
+        self.image = pygame.image.load(resource_path('./ourpygame/bullet2.png'))
+        self.sound = pygame.mixer.Sound(resource_path('./ourpygame/shotgun2.wav'))
+        self.rect = self.image.get_rect()
+        self.rect.x = xpos
+        self.rect.y = ypos
+        self.speed = speed
+        
+        
+class Shotgun(Bullet):
+    def __init__(self, xpos, ypos, speed):
+        super(Bullet, self).__init__()
+        self.image = pygame.image.load(resource_path('./ourpygame/bullet2.png'))
+        self.sound = pygame.mixer.Sound(resource_path('./ourpygame/shotgun2.wav'))
+        self.rect = self.image.get_rect()
+        self.rect.x = xpos
+        self.rect.y = ypos
+        self.speed = speed        
+            
+
+# 몬스터 객체
+class Monster(pygame.sprite.Sprite):
+    def __init__(self, xpos, ypos, speed):
+        super(Monster, self).__init__()
+        monster_images_path = resource_path('./ourpygame/monster')
+        image_file_list = os.listdir(monster_images_path)
+        self.image_path_list = [os.path.join(monster_images_path, file)
+                                for file in image_file_list if file.endswith(".png")]
+        choice_monster_path = random.choice(self.image_path_list)
+        self.image = pygame.image.load(choice_monster_path).convert_alpha()
+        self.mask = pygame.mask.from_surface(self.image)
+        self.rect = self.image.get_rect()
+        self.rect.x = xpos
+        self.rect.y = ypos
+        self.speed = speed
+
+    # 몬스터 업데이트
+    def update(self):
+        self.rect.y += self.speed
+
+    # 몬스터 게임 화면
+    def out_of_screen(self):
+        if self.rect.y > SCREEN_HEIGHT:
+            return True
+
+# 아이템     
+class ITEM(pygame.sprite.Sprite):
+    def __init__(self, xpos, ypos, speed):
+        super(ITEM, self).__init__()
+        self.image = pygame.image.load(resource_path('./ourpygame/holy-water.png'))
+        self.rect = self.image.get_rect()
+        self.rect.x = xpos
+        self.rect.y = ypos
+        self.speed = speed
+
+    def collide(self, sprites):
+        for sprite in sprites:
+            if pygame.sprite.collide_rect(self, sprite):
+                return sprite
+
+    def update(self):
+        self.rect.y += self.speed
+        
+
+# 게임 객체
+class Game(pygame.sprite.Sprite):
+    def __init__(self):
+        self.menu_image = pygame.image.load(resource_path('./ourpygame/gamemenu.png'))
+        self.background_image = pygame.image.load(resource_path('./ourpygame/background1.png'))
+        self.explosion_image = pygame.image.load(resource_path('./ourpygame/blood.png'))
+        self.item_explosion_image = pygame.image.load(resource_path('./ourpygame/flash.png'))
+        self.default_font = pygame.font.Font(resource_path('./ourpygame/youmurdererbb_reg.ttf'), 28)
+        self.font_100 = pygame.font.Font(resource_path('./ourpygame/Ghastly Panic.ttf'), 100)
+        self.font_50 = pygame.font.Font(resource_path('./ourpygame/Ghastly Panic.ttf'), 50)
+        self.font_30 = pygame.font.Font(resource_path('./ourpygame/youmurdererbb_reg.ttf'), 30)
+        
+        explosion_sound_path = resource_path('./ourpygame/sound')
+        explosion_sound_file_list = os.listdir(explosion_sound_path)
+        self.explosion_sound_file_list = [os.path.join(explosion_sound_path, file) for file in explosion_sound_file_list]
+        
+        self.item_explosion_sound = pygame.mixer.Sound(resource_path('./ourpygame/item_sound.wav'))
+        
+        self.gameover_sound = pygame.mixer.Sound(resource_path('./ourpygame/Game_over.wav'))
+        pygame.mixer.music.load(resource_path('./ourpygame/HorrorBGM2.mp3'))
+
+        self.fighter = Fighter()
+        self.bullets = pygame.sprite.Group()
+        self.monsters = pygame.sprite.Group()
+        self.items = pygame.sprite.Group()
+
+        self.occur_prob = 40
+        
+        # 아이템 출현 빈도
+        self.occur_item_prob = 700
+        self.shot_count = 0
+        self.ultimate = 0
+        self.ultimate_gauge = False
+        self.count_missed = 0
+
+        # 게임 메뉴 On/Off
+        self.menu_on = True
+        
+        # 무기 전환
+        self.change_weapon = False
+
+    # 텍스트 그리기
+    def draw_text(self, screen, text, font, x, y, color):
+        text_obj = font.render(text, True, color)
+        text_rect = text_obj.get_rect()
+        text_rect.center = x, y
+        screen.blit(text_obj, text_rect)
+    
+    # 이미지 그리기
+    def draw_img(self, screen, img, x, y):
+        img_rect = img.get_rect()
+        img_rect.center = x, y
+        screen.blit(img, img_rect)
+
+    # 게임 이벤트 처리 및 조작
+    def process_events(self):
+        
+        # 게임 이벤트 처리
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return True
+            
+            # 메뉴 화면 이벤트 처리
+            if self.menu_on:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_SPACE:
+                        pygame.mixer.music.play(-1) 
+                        self.shot_count = 0
+                        self.count_missed = 0
+                        
+                        # 게임 메뉴 On/Off
+                        self.menu_on = False
+                        
+            # 게임 화면 이벤트 처리
+            else:
+                if event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_LEFT:
+                        self.fighter.dx -= 5
+                    elif event.key == pygame.K_RIGHT:
+                        self.fighter.dx += 5
+                    elif event.key == pygame.K_UP:
+                        self.fighter.dy -= 5
+                    elif event.key == pygame.K_DOWN:
+                        self.fighter.dy += 5
+                    elif self.change_weapon == False and event.key == pygame.K_SPACE:
+                        self.ultimate_gauge = False
+                        bullet = Bullet(self.fighter.rect.centerx, self.fighter.rect.y, 10)
+                        
+                        self.bullets.add(bullet)
+                    
+                    # 필살기 1)
+                    elif self.ultimate >= 100 and event.key == pygame.K_a:
+                        self.ultimate_gauge = True 
+                       
+                        if self.change_weapon == False:                                                                
+                            for i in range(0, int(SCREEN_WIDTH/4), 10):
+                                bullet = Bullet(self.fighter.rect.centerx + i, self.fighter.rect.y, 30)
+                                self.bullets.add(bullet)
+                            for j in range(0, int(SCREEN_WIDTH/4), 10):
+                                bullet = Bullet(self.fighter.rect.centerx - j, self.fighter.rect.y, 30)
+                                self.bullets.add(bullet)
+                            self.ultimate -= 100
+                    
+                    # 라이플 -> 샷건
+                    elif self.ultimate >= 300 and event.key == pygame.K_z:
+                        self.fighter.change_fighter()
+                        self.change_weapon = True
+                        
+                        
+                    # 샷건 -> 라이플
+                    elif event.key == pygame.K_x:
+                        self.fighter.image = pygame.image.load(resource_path('./ourpygame/rifle.png'))
+                        self.fighter.reset()
+                        self.change_weapon = False
+
+                    # 필살기 2 : 화살표 모양으로 샷건
+                    elif event.key == pygame.K_s and self.ultimate >= 300 and self.change_weapon:
+                            
+                        for i in range(0, int(SCREEN_WIDTH/20), 10):
+                            for j in range(10, 30, 10):
+                                bullet = Shotgun(self.fighter.rect.centerx + i + j, self.fighter.rect.y + i - j, 50)
+                                self.bullets.add(bullet)
+                                bullet = Shotgun(self.fighter.rect.centerx - i - j, self.fighter.rect.y + i - j, 50)
+                                self.bullets.add(bullet)
+                        self.ultimate -= 20
+
+                elif event.type == pygame.KEYUP:
+                    if event.key == pygame.K_LEFT or event.key == pygame.K_RIGHT:
+                        self.fighter.dx = 0
+                    elif event.key == pygame.K_UP or event.key == pygame.K_DOWN:
+                        self.fighter.dy = 0
+
+        return False     
+
+    
+    # 게임 로직 수행
+    def run_logic(self, screen):
+        # 몬스터 수와 속도 조절
+        occur_of_monsters = 1 + int(self.shot_count / 300)
+        min_monster_speed = 1 + int(self.shot_count / 200)
+        max_monster_speed = 1 + int(self.shot_count / 100)   
+             
+        # 아이템 수
+        occur_of_items = 1     
+        
+        if self.shot_count >= 100:
+            self.background_image = pygame.image.load(resource_path('./ourpygame/background2.png'))
+            occur_of_monsters = 2 + int(self.shot_count / 300)
+            min_monster_speed = 2 + int(self.shot_count / 200)
+            max_monster_speed = 2 + int(self.shot_count / 100)   
+                
+            if self.shot_count >= 200:
+                self.background_image = pygame.image.load(resource_path('./ourpygame/background3.png'))
+                occur_of_monsters = 3 + int(self.shot_count / 300)
+                min_monster_speed = 3 + int(self.shot_count / 200)
+                max_monster_speed = 3 + int(self.shot_count / 100)   
+
+        # 랜덤 확률의 빈도로 수행
+        if random.randint(1, self.occur_prob) == 1:
+            
+            # 몬스터 생성 및 생성된 몬스터만큼 점수 증가
+            for i in range(occur_of_monsters):
+                speed = random.randint(min_monster_speed, max_monster_speed)
+                monster = Monster(random.randint(0, SCREEN_WIDTH - 30), 0, speed)
+                self.monsters.add(monster)
+
+        if random.randint(1, self.occur_item_prob) == 1:
+         
+            # 아이템 생성
+            for i in range(occur_of_items):  
+                speed = random.randint(min_monster_speed, max_monster_speed)
+                item = ITEM(random.randint(0, SCREEN_WIDTH - 30), 0, speed)
+                self.items.add(item)   
+
+        # 탄환 충돌 체크
+        for bullet in self.bullets:
+            monster = bullet.collide(self.monsters)
+            if monster:
+                self.occur_explosion(screen, monster.rect.x, monster.rect.y)
+                self.shot_count += 1
+                if self.ultimate_gauge == False:
+                    self.ultimate += 10
+                bullet.kill()
+                monster.kill()     
+
+        # 아이템 먹기
+        if pygame.sprite.spritecollide(self.fighter, self.items, False, 
+                                       pygame.sprite.collide_mask):
+            pygame.mixer_music.stop()
+            self.occur_item_explosion(screen, self.fighter.rect.x, self.fighter.rect.y)
+            self.item_explosion_sound.play()
+
+            # 아이템 효과
+            self.ultimate += 100
+            self.items.empty()
+
+        # 몬스터 화면 벗어남 체크
+        for monster in self.monsters:
+            if monster.out_of_screen():
+                monster.kill()
+                self.count_missed += 1
+
+        # 몬스터와 충돌하거나 5번 이상 놓친 경우
+        if pygame.sprite.spritecollide(self.fighter, self.monsters, False, 
+                                       pygame.sprite.collide_mask) or self.count_missed >=5 :
+            pygame.mixer_music.stop()
+            self.occur_explosion(screen, self.fighter.rect.x, self.fighter.rect.y)
+            self.gameover_sound.play()
+            self.monsters.empty()
+            self.fighter.reset()
+            self.menu_on = True
+            
+            f=open("./ourpygame/score.txt", 'a')
+            resultscore = str(self.shot_count*5) + '\n'
+            f.write(resultscore)
+            f.close()
+            
+            sleep(1)
+            self.draw_text(screen, "YOU'RE DEAD", self.font_100, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, RED)
+            sleep(2)
+            display_rank(screen)
+            sleep(7)
+            re_start() 
+
+    # 충돌 이벤트 발생
+    def occur_explosion(self, screen, x, y):
+        explosion_image = pygame.image.load(resource_path('./ourpygame/blood.png'))
+        explosion_rect = self.explosion_image.get_rect()
+        explosion_rect.x = x
+        explosion_rect.y = y
+        screen.blit(self.explosion_image, explosion_rect)
+        pygame.display.update()
+
+        explosion_sound = pygame.mixer.Sound(random.choice(self.explosion_sound_file_list))
+        explosion_sound.play()
+
+    # 아이템 먹기
+    def occur_item_explosion(self, screen, x, y):
+        item_explosion_image = pygame.image.load(resource_path('./ourpygame/flash.png'))
+        item_explosion_rect = self.item_explosion_image.get_rect()
+        item_explosion_rect.x = x
+        item_explosion_rect.y = y
+        screen.blit(self.item_explosion_image, item_explosion_rect)
+        pygame.display.update()
+
+
+# 게임 메뉴 출력
+    def display_menu(self, screen):
+        screen.blit(self.menu_image, [0, 0])
+        draw_x = int(SCREEN_WIDTH / 2)
+        draw_y = int(SCREEN_HEIGHT / 4)
+        self.draw_text(screen, ' KILL OR DIE',
+                        self.font_100, draw_x, draw_y, RED)
+
+        self.draw_text(screen, 'Press Spacebar',
+                        self.font_50, draw_x, draw_y + 270, WHITE)
+
+        self.draw_text(screen, 'for Start',
+                        self.font_50, draw_x, draw_y + 350, WHITE)
+        self.draw_text(screen, 'made by 4Kim1Park',
+                        self.font_30, draw_x - 150, draw_y - 140, WHITE)          
+
+    # 게임 프레임 출력
+    def display_frame(self, screen):
+        # 배경 이미지
+        screen.blit(self.background_image, self.background_image.get_rect())
+        
+        # 스코어 : 몬스터 한 마리 당 5점
+        self.draw_text(screen, 'Kill: {}'.format(self.shot_count),
+                       self.default_font, SCREEN_WIDTH / 9, 15, WHITE)
+        
+        # 레벨 : 5개 맞출 때마다 레벨 1 업
+        self.draw_text(screen, 'Level: {}'.format(int(self.shot_count/5)), 
+                      self.default_font, 50, 45, WHITE)
+        
+        
+        # 라이프
+        self.draw_text(screen, 'Life:', self.default_font, 35, 75, RED)
+                
+        # 놓칠 때마다 라이프 하나씩 깎임        
+        if self.count_missed == 0:        
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 70, 75)
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 90, 75) 
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 110, 75) 
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 130, 75) 
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 150, 75)
+        elif self.count_missed == 1:
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 70, 75)
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 90, 75) 
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 110, 75) 
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 130, 75)
+        elif self.count_missed == 2:
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 70, 75)
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 90, 75) 
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 110, 75)
+        elif self.count_missed == 3:
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 70, 75)
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 90, 75)
+        elif self.count_missed == 4:
+            self.draw_img(screen, pygame.image.load('./ourpygame/heart.png'), 70, 75)
+        elif self.count_missed == 5 or self.fighter.collide(self.monsters):
+            self.draw_img(screen, None, 70, 75)
+        
+        # 필살기 게이지
+        self.draw_text(screen, 'ultimate gauge: {}'.format(self.ultimate),
+                       self.font_30, SCREEN_WIDTH*3 / 4, 20, WHITE)
+        self.draw_text(screen, "PRESS 'SPACE BAR' AND KILL THOSE MONSTERS!", 
+                       self.font_30, SCREEN_WIDTH / 2, SCREEN_WIDTH - 40, WHITE)
+        
+        if self.ultimate >= 100:
+            self.draw_text(screen, "PRESS 'A' FOR ADVANCED SKILL!",
+                        self.font_30, SCREEN_WIDTH / 2, SCREEN_WIDTH - 10, WHITE) 
+            if self.ultimate >= 300:
+                self.draw_text(screen, "PRESS 'Z' FOR CHANGE WEAPON : SHOT GUN",
+                              self.font_30, SCREEN_WIDTH / 2, SCREEN_WIDTH + 20, WHITE)
+                self.draw_text(screen, "AND PRESS 'S' FOR ULTIMATE SKILL!",
+                              self.font_30, SCREEN_WIDTH / 2, SCREEN_WIDTH + 50, WHITE)                
+                self.draw_text(screen, "PRESS 'X' FOR CHANGE WEAPON : RIFLE!",
+                              self.font_30, SCREEN_WIDTH / 2, SCREEN_WIDTH + 80, WHITE)
+        
+        self.monsters.update()
+        self.monsters.draw(screen)
+        self.bullets.update()
+        self.bullets.draw(screen)
+        self.fighter.update()
+        self.fighter.draw(screen)
+        self.items.update()
+        self.items.draw(screen)      
+        
+        if pygame.sprite.spritecollide(self.fighter, self.monsters, False, 
+                                       pygame.sprite.collide_mask) or self.count_missed >=5 :
+            self.draw_text(screen, "YOU'RE DEAD", self.font_100, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, RED)
+        
+# 랭크 화면 출력
+def display_rank(screen):
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    menu_image = pygame.image.load(resource_path('./ourpygame/gamemenu.png'))
+    font_60 = pygame.font.Font(resource_path('./ourpygame/youmurdererbb_reg.ttf'), 60)
+    font_40 = pygame.font.Font(resource_path('./ourpygame/youmurdererbb_reg.ttf'), 40)
+    
+    screen.blit(menu_image, [0, 0])
+    draw_x = int(SCREEN_WIDTH / 2)
+    draw_y = int(SCREEN_HEIGHT / 4)
+
+
+    title_label = font_60.render('RANKING', True, WHITE)
+    text_rect = title_label.get_rect()
+    text_rect.center = draw_x, draw_y 
+    screen.blit(title_label,text_rect)
+    
+    scores = pd.read_table('./ourpygame/score.txt', header=None).sort_values(by=0, ascending=False)
+    
+    first = int(scores.values[0]/5)
+    second = int(scores.values[1]/5)
+    third = int(scores.values[2]/5)
+    fourth = int(scores.values[3]/5)
+    fifth = int(scores.values[4]/5)
+    
+    
+    first_label = font_60.render(f'1st. {first} KILL', True, YELLOW)
+    first_rect = first_label.get_rect()
+    first_rect.center = draw_x, (draw_y+50)
+    screen.blit(first_label, first_rect)
+    
+    second_label = font_40.render(f'2nd. {second} KILL', True, WHITE)
+    second_rect = second_label.get_rect()
+    second_rect.center = draw_x, (draw_y+100)
+    screen.blit(second_label, second_rect)
+    
+    third_label = font_40.render(f'3rd. {third} KILL', True, WHITE)
+    third_rect = third_label.get_rect()
+    third_rect.center = draw_x, (draw_y+150)
+    screen.blit(third_label, third_rect)
+
+    fourth_label = font_40.render(f'4th. {fourth} KILL', True, WHITE)
+    fourth_rect = fourth_label.get_rect()
+    fourth_rect.center = draw_x, (draw_y+200)
+    screen.blit(fourth_label, fourth_rect)
+    
+    fifth_label = font_40.render(f'5th. {fifth} KILL', True, WHITE)
+    fifth_rect = fifth_label.get_rect()
+    fifth_rect.center = draw_x, (draw_y+250)
+    screen.blit(fifth_label, fifth_rect)
+        
+    pygame.display.update()        
+    
+            
+            
+def re_start():
+    pygame.init()
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    menu_image = pygame.image.load(resource_path('./ourpygame/gameover.jpg'))
+    font_100 = pygame.font.Font(resource_path('./ourpygame/youmurdererbb_reg.ttf'), 100)
+    run = True
+    while run:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                run = False
+                pygame.quit()
+        screen.blit(menu_image, [0, 0])
+        draw_x = int(SCREEN_WIDTH / 2)
+        draw_y = int(SCREEN_HEIGHT / 4)
+
+        startButton = Button(startImg,120,420,60,20,clickStartImg,130,415,startgame)
+        quitButton = Button(quitImg,300,420,60,20,clickQuitImg,310,415,quitgame)
+        pygame.display.update()
+        clock.tick(15)
+        
+        
+#이미지 추가
+startImg = pygame.image.load("./ourpygame/starticon.png")
+quitImg = pygame.image.load("./ourpygame/quiticon.png")
+clickStartImg = pygame.image.load("./ourpygame/clickedStartIcon.png")
+clickQuitImg = pygame.image.load("./ourpygame/clickedQuitIcon.png")
+font = pygame_menu.font.FONT_HELVETICA
+
+#화면 설정
+gameDisplay = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+
+#시간
+clock = pygame.time.Clock()
+
+
+
+# 게임 리소스 경로
+def resource_path(relative_path):
+    try:
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+
+def main():
+    pygame.init()
+    pygame.display.set_caption('Shooting Game')
+    screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+    clock = pygame.time.Clock()
+    game = Game()
+
+    done = False
+    while not done:
+        done = game.process_events()
+        if game.menu_on:  # 게임 메뉴 처리
+            game.display_menu(screen)
+
+        else:  # 게임 화면 처리
+            game.run_logic(screen)
+            game.display_frame(screen)
+        pygame.display.flip()
+        clock.tick(FPS)
+    pygame.quit()
+
+# 게임 종료
+def quitgame():
+    pygame.quit()
+    sys.exit()    
+       
+# 다시 시작
+def startgame():
+    main()
+    
+if __name__ == "__main__":
+    main()

@@ -207,7 +207,7 @@ class Game(pygame.sprite.Sprite):
         self.occur_prob = 40
         
         # 아이템 출현 빈도
-        self.occur_item_prob = 40
+        self.occur_item_prob = 700
         self.shot_count = 0
         self.ultimate = 0
         self.ultimate_gauge = False

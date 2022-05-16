@@ -195,9 +195,9 @@ class Game(pygame.sprite.Sprite):
         self.explosion_sound_file_list = [os.path.join(explosion_sound_path, file) for file in explosion_sound_file_list]
         
         self.item_explosion_sound = pygame.mixer.Sound(resource_path('./ourpygame/item_sound.wav'))
-        
         self.gameover_sound = pygame.mixer.Sound(resource_path('./ourpygame/Game_over.wav'))
-        pygame.mixer.music.load(resource_path('./ourpygame/HorrorBGM2.mp3'))
+        self.bgm = pygame.mixer.Sound(resource_path('./ourpygame/HorrorBGM2.mp3'))
+        self.bgm.play(-1)
 
         self.fighter = Fighter()
         self.bullets = pygame.sprite.Group()
@@ -207,7 +207,7 @@ class Game(pygame.sprite.Sprite):
         self.occur_prob = 40
         
         # 아이템 출현 빈도
-        self.occur_item_prob = 700
+        self.occur_item_prob = 40
         self.shot_count = 0
         self.ultimate = 0
         self.ultimate_gauge = False
@@ -338,7 +338,8 @@ class Game(pygame.sprite.Sprite):
         # 랜덤 확률의 빈도로 수행
         if random.randint(1, self.occur_prob) == 1:
             
-            # 몬스터 생성 및 생성된 몬스터만큼 점수 증가
+            # 몬스터 생성 및 생성된 몬스터만큼 점수 ptob
+            
             for i in range(occur_of_monsters):
                 speed = random.randint(min_monster_speed, max_monster_speed)
                 monster = Monster(random.randint(0, SCREEN_WIDTH - 30), 0, speed)
@@ -368,7 +369,8 @@ class Game(pygame.sprite.Sprite):
                                        pygame.sprite.collide_mask):
             pygame.mixer_music.stop()
             self.occur_item_explosion(screen, self.fighter.rect.x, self.fighter.rect.y)
-            self.item_explosion_sound.play()
+            # self.item_explosion_sound.play()
+            # pygame.mixer.music.load(resource_path('./ourpygame/HorrorBGM2.mp3'))
 
             # 아이템 효과
             self.ultimate += 100
@@ -422,6 +424,8 @@ class Game(pygame.sprite.Sprite):
         item_explosion_rect.y = y
         screen.blit(self.item_explosion_image, item_explosion_rect)
         pygame.display.update()
+        item_explosion_sound = pygame.mixer.Sound(resource_path('./ourpygame/item_sound.wav'))
+        item_explosion_sound.play()
 
 
 # 게임 메뉴 출력

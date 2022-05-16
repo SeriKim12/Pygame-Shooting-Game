@@ -244,7 +244,7 @@ class Game(pygame.sprite.Sprite):
             if self.menu_on:
                 if event.type == pygame.KEYDOWN:
                     if event.key == pygame.K_SPACE:
-                        pygame.mixer.music.play(-1) 
+                        self.bgm.play(-1) 
                         self.shot_count = 0
                         self.count_missed = 0
                         

@@ -30,6 +30,10 @@ font = pygame_menu.font.FONT_HELVETICA
 #화면 설정
 gameDisplay = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
 
+# 게임 로고
+logo = pygame.image.load("./ourpygame/logo.png")
+pygame.display.set_icon(logo)
+
 #시간
 clock = pygame.time.Clock()
 

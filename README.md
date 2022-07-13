@@ -1,5 +1,5 @@
 # Pygame-Shooting-Game
-Horror theme of py-shooting game team project during 5 days.
+- Horror theme of py-shooting game team project during 5 days.
 
 final_final is the code of the game, and final_zip is the images and bgm files for the game.
 You can play the game to download the exe file.
